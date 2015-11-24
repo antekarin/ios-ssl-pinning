@@ -42,20 +42,29 @@
 
 -(void)URLSession:(NSURLSession *)session didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential * _Nullable))completionHandler {
     
-    id<NSURLAuthenticationChallengeSender> sender = [challenge sender];
-    
+    // Get remote certificate
     SecTrustRef serverTrust = challenge.protectionSpace.serverTrust;
     SecCertificateRef certificate = SecTrustGetCertificateAtIndex(serverTrust, 0);
-    NSData *remoteCertificateData = CFBridgingRelease(SecCertificateCopyData(certificate));
     
+    // Set SSL policies for domain name check
+    NSMutableArray *policies = [NSMutableArray array];
+    [policies addObject:(__bridge_transfer id)SecPolicyCreateSSL(true, (__bridge CFStringRef)challenge.protectionSpace.host)];
+    SecTrustSetPolicies(serverTrust, (__bridge CFArrayRef)policies);
+    
+    // Evaluate server certificate
+    SecTrustResultType result;
+    SecTrustEvaluate(serverTrust, &result);
+    BOOL certificateIsValid = (result == kSecTrustResultUnspecified || result == kSecTrustResultProceed);
+    
+    NSData *remoteCertificateData = CFBridgingRelease(SecCertificateCopyData(certificate));
     NSString *pathToCert = [[NSBundle mainBundle]pathForResource:@"github.com" ofType:@"cer"];
     NSData *localCertificate = [NSData dataWithContentsOfFile:pathToCert];
     
-    if ([remoteCertificateData isEqualToData:localCertificate]) {
+    // The pinnning check
+    if ([remoteCertificateData isEqualToData:localCertificate] && certificateIsValid) {
         NSURLCredential *credential = [NSURLCredential credentialForTrust:serverTrust];
         completionHandler(NSURLSessionAuthChallengeUseCredential, credential);
     } else {
-        [sender cancelAuthenticationChallenge:challenge];
         completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, NULL);
     }
 }
