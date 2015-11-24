@@ -56,6 +56,7 @@
     SecTrustEvaluate(serverTrust, &result);
     BOOL certificateIsValid = (result == kSecTrustResultUnspecified || result == kSecTrustResultProceed);
     
+    // Get local and remote cert data
     NSData *remoteCertificateData = CFBridgingRelease(SecCertificateCopyData(certificate));
     NSString *pathToCert = [[NSBundle mainBundle]pathForResource:@"github.com" ofType:@"cer"];
     NSData *localCertificate = [NSData dataWithContentsOfFile:pathToCert];

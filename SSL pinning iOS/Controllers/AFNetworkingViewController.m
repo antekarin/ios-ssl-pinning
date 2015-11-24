@@ -30,6 +30,11 @@
     
     AFSecurityPolicy *policy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModePublicKey];
     manager.securityPolicy = policy;
+
+    // optional
+    NSString *pathToCert = [[NSBundle mainBundle]pathForResource:@"github.com" ofType:@"cer"];
+    NSData *localCertificate = [NSData dataWithContentsOfFile:pathToCert];
+    manager.securityPolicy.pinnedCertificates = @[localCertificate];
     
     [self.activityIndicator startAnimating];
     manager.responseSerializer = [AFHTTPResponseSerializer serializer];
@@ -37,7 +42,7 @@
         [self.activityIndicator stopAnimating];
         NSLog(@"Response: %@", responseObject);
         
-        self.dataTextView.text = [responseObject description];
+        self.dataTextView.text = operation.responseString;
         self.dataTextView.textColor = [UIColor darkTextColor];
         
         
